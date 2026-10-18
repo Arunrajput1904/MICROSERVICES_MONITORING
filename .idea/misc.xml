@@ -10,6 +10,7 @@
         <option value="$PROJECT_DIR$/Api-Gateway/pom.xml" />
         <option value="$PROJECT_DIR$/config-server/pom.xml" />
         <option value="$PROJECT_DIR$/email-service/pom.xml" />
+        <option value="$PROJECT_DIR$/AIOps-Engine-Service/pom.xml" />
       </list>
     </option>
     <option name="enabledProfiles">

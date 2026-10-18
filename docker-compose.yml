@@ -1,0 +1,274 @@
+version: '3.8'
+
+services:
+  db1:
+    image: postgres:latest
+    container_name: "address-post"
+    environment:
+      POSTGRES_DB: address-db
+      POSTGRES_USER: arun
+      POSTGRES_PASSWORD: arun123
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata1:/var/lib/postgresql/18/docker
+    networks:
+      - micro-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arun -d address-db"]
+      interval: 5s
+      retries: 5
+      timeout: 3s
+
+  db2:
+    image: postgres:latest
+    container_name: "employee-post"
+    environment:
+      POSTGRES_DB: employee-db
+      POSTGRES_USER: arun
+      POSTGRES_PASSWORD: arun123
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata2:/var/lib/postgresql/18/docker
+    networks:
+      - micro-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arun -d employee-db"]
+      interval: 5s
+      retries: 5
+      timeout: 3s
+
+  discovery-service:
+    image: arun1904/discovery-service
+    container_name: "discovery-service"
+    ports:
+      - "5000:5000"
+    networks:
+      - micro-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  config-server:
+    image: arun1904/config-server
+    container_name: "config-server"
+    restart: on-failure
+    dns:
+     - 8.8.8.8
+     - 1.1.1.1
+    ports:
+      - "8888:8888"
+    environment:
+      EUREKA_INSTANCE_HOSTNAME: config-server
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:5000/eureka/
+      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: https://github.com/Arunrajput1904/config-file.git
+#      SPRING_CLOUD_CONFIG_SERVER_GIT_USERNAME: Arunrajput1904
+#      SPRING_CLOUD_CONFIG_SERVER_GIT_PASSWORD: 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
+      SERVER_PORT: 8888
+    networks:
+      - micro-network
+    depends_on:
+      - discovery-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka1:
+    image: apache/kafka:4.0.0
+    container_name: kafka1
+    networks:
+      - micro-network
+    ports:
+      - "9092:9092"
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:9092,EXTERNAL://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+    healthcheck:
+      # FIX: Targets the proper network hostname instead of localhost
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka1:9092 > /dev/null 2>&1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka2:
+      image: apache/kafka:4.0.0
+      container_name: kafka2
+      networks:
+        - micro-network
+      ports:
+        - "9094:9094" # Avoid port overlap on host machine
+      environment:
+        CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+        KAFKA_NODE_ID: 2
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093
+        KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+        KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka2:9092,EXTERNAL://localhost:9094
+        KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+        KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      healthcheck:
+        # FIX: Targets the proper network hostname instead of localhost
+        test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka2:9092 > /dev/null 2>&1" ]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+
+  kafka-init:
+      image: apache/kafka:4.0.0
+      networks:
+        - micro-network
+      depends_on:
+        kafka1:
+          condition: service_healthy
+        kafka2:
+          condition: service_healthy
+      command: >
+        bash -c "
+        /opt/kafka/bin/kafka-topics.sh --create --topic test-topics --partitions 2 --replication-factor 2 --if-not-exists --bootstrap-server kafka1:9092 &&
+        /opt/kafka/bin/kafka-topics.sh --create --topic user-topics --partitions 2 --replication-factor 2 --if-not-exists --bootstrap-server kafka1:9092
+        "
+
+  address-service:
+    image: arun1904/address-service
+    container_name: "address-service"
+    ports:
+      - "8082:8080"
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db1:5432/address-db
+      SPRING_DATASOURCE_USERNAME: arun
+      SPRING_DATASOURCE_PASSWORD: arun123
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_INSTANCE_HOSTNAME: address-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:5000/eureka/
+    depends_on:
+      db1:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - micro-network
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 100s
+
+  employee-service:
+    image: arun1904/employee-service
+    container_name: "employee-service"
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:9092,kafka2:9092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db2:5432/employee-db
+      SPRING_DATASOURCE_USERNAME: arun
+      SPRING_DATASOURCE_PASSWORD: arun123
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      SPRING_CLOUD_FUNCTION_DEFINITION: supplier
+      SPRING_CLOUD_STREAM_BINDINGS_SUPPLIER_OUT_0_DESTINATION: test-topics
+      SPRING_CLOUD_STREAM_BINDINGS_SUPPLIER_OUT_0_PRODUCER_POLLER_FIXED_DELAY: 5000
+      SPRING_CLOUD_STREAM_BINDINGS_EMPLOYEEBRIDGE_OUT_0_DESTINATION: user-topics
+      EUREKA_INSTANCE_HOSTNAME: employee-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:5000/eureka/
+    depends_on:
+      db2:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - micro-network
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+
+  email-service:
+    image: arun1904/email-service
+    container_name: "email-service"
+    ports:
+      - "8084:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+      SPRING_CLOUD_FUNCTION_DEFINITION: consumer;message
+      SPRING_CLOUD_STREAM_FUNCTION_DEFINITION: consumer;message
+      SPRING_CLOUD_STREAM_BINDINGS_CONSUMER_IN_0_DESTINATION: test-topics
+      SPRING_CLOUD_STREAM_BINDINGS_MESSAGE_IN_0_DESTINATION: user-topics
+      SPRING_CLOUD_STREAM_BINDINGS_MESSAGE_IN_0_GROUP: emp-service
+      SPRING_CLOUD_STREAM_BINDINGS_EMAILCONSUMER_IN_0_DESTINATION: user-topics
+      SPRING_CLOUD_STREAM_BINDINGS_EMAILCONSUMER_IN_0_GROUP: email-service
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:9092,kafka2:9092
+      EUREKA_INSTANCE_HOSTNAME: email-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:5000/eureka/
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      employee-service:
+        condition: service_healthy
+    networks:
+      - micro-network
+    restart: on-failure
+
+  api-gateway:
+    image: arun1904/api-gateway
+    container_name: "api-gateway"
+    restart: on-failure
+    ports:
+      - "8803:8080"
+    environment:
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:5000/eureka/
+    networks:
+      - micro-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+volumes:
+  pgdata1:
+  pgdata2:
+
+networks:
+  micro-network:
+    driver: bridge

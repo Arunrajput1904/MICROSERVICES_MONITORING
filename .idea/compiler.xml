@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.40/lombok-1.18.40.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.40/lombok-1.18.40.jar" />
         </processorPath>
         <module name="Employee-Service" />
       </profile>
@@ -19,30 +20,23 @@
         <module name="Api-Gateway" />
         <module name="config-server" />
       </profile>
-      <profile name="Annotation profile for email-service" enabled="true">
+      <profile name="Annotation profile for AIOps-Engine-Service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
-        <module name="email-service" />
-      </profile>
-      <profile name="Annotation profile for serviceDiscovery" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
-        </processorPath>
-        <module name="Address-Service" />
+        <module name="AIOps-Engine-Service" />
         <module name="serviceDiscovery" />
+        <module name="Address-Service" />
+        <module name="email-service" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="AIOps-Engine-Service" options="-parameters" />
       <module name="Address-Service" options="-parameters" />
       <module name="Api-Gateway" options="-parameters" />
       <module name="Employee-Service" options="-parameters" />

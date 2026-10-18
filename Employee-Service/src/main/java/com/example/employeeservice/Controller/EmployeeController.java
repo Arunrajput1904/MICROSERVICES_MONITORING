@@ -8,9 +8,13 @@ import com.example.employeeservice.Service.EmployeeService;
 import com.sun.net.httpserver.Authenticator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,11 +28,12 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
 
-    @Autowired
-private  KafkaTemplate<String, EmailObject> kafkaTemplate;
-    
+//    @Autowired
+//private  KafkaTemplate<String, EmailObject> kafkaTemplate;
+    private final StreamBridge streamBridge;
     @GetMapping("/get/{id}")
     public EmployeeAddressDto getEmployee(@PathVariable long id) {
+
         return employeeService.getEmployeeById(id);
     }
 
@@ -36,7 +41,11 @@ private  KafkaTemplate<String, EmailObject> kafkaTemplate;
     @PostMapping("/post")
     public ResponseEntity<Success> postEmployee(@RequestBody EmployeeAddressDto employeeDto) {
         employeeService.saveEmployee(employeeDto);
-kafkaTemplate.send("new-user-email1",new EmailObject(employeeDto.getName(),"Email Sender"));
+//kafkaTemplate.send("test-topics",String.valueOf(Math.random()*19),new EmailObject(employeeDto.getName(),"Email Sender"));
+        streamBridge.send("employeeBridge-out-0", MessageBuilder.withPayload(employeeDto.getName())
+                .setHeader(KafkaHeaders.PARTITION, 0).build());
+
+
         return new  ResponseEntity<>(new Success("Success",HttpStatus.OK), HttpStatus.OK);
     }
 
