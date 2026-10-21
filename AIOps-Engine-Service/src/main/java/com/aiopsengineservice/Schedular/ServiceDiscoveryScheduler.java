@@ -47,7 +47,7 @@ private final MetricSnapshotRepo metricSnapshotRepo;
         log.info(">>> ServiceDiscoveryScheduler Loaded <<<");
     }
 
-    @Scheduled(fixedRate = 15000, initialDelay = 5000)
+//    @Scheduled(fixedRate = 15000, initialDelay = 5000)
     void schedulingDepth(){
 
         log.info("services");

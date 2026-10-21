@@ -56,7 +56,6 @@ public class AddressController {
     @GetMapping("/getdataexception")
     public ResponseEntity<String>getdata(){
         throw new NullPointerException("Null");
-//        return ResponseEntity.ok("Done");
     }
 
     @GetMapping("/timeout")

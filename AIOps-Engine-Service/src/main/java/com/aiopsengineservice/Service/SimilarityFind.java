@@ -1,35 +1,76 @@
 package com.aiopsengineservice.Service;
+import com.aiopsengineservice.Entity.DashboardDeveloperTrigger;
 import com.aiopsengineservice.Entity.IncidentRecord;
+import com.aiopsengineservice.Entity.ResolvedIncident;
+import com.aiopsengineservice.Repository.DashboardDeveloperTriggerRepo;
 import com.aiopsengineservice.Repository.IncidentRecordRepo;
+import com.aiopsengineservice.Repository.ResolvedIncidentRepo;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.ai.document.Document;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @Service
-@RequiredArgsConstructor
+
 public class SimilarityFind {
 
+    private final DashboardDeveloperTriggerRepo developerTriggerRepo;
     private final VectorStore vectorStore;
-    private final IncidentRecordRepo incidentRecordRepo;
+    private final ResolvedIncidentRepo incidentRecordRepo;
     private final GeminiClient geminiClient;
-    public String messageinvoke(String sanitizedLog) {
+
+
+    private final String owner = "Arunrajput1904";
+    private final String repo = "MICROSERVICES_MONITORING";
+    private final RestClient client;
+
+    public SimilarityFind(DashboardDeveloperTriggerRepo developerTriggerRepo, VectorStore vectorStore,
+                          ResolvedIncidentRepo incidentRecordRepo, @Lazy GeminiClient geminiClient,
+                          RestClient.Builder client , @Value("${pat}") String token) {
+        this.developerTriggerRepo = developerTriggerRepo;
+        this.vectorStore = vectorStore;
+        this.incidentRecordRepo = incidentRecordRepo;
+        this.geminiClient = geminiClient;
+        this.client = client
+                .baseUrl("https://api.github.com")
+                .defaultHeader("Authorization","Bearer "+token)
+                .defaultHeader("Accept", "application/vnd.github+json")
+                .build();
+    }
+    public void messageinvoke(String sanitizedLog) {
         String normalizedTrace = extractStackTrace(sanitizedLog);
         String errorHash = generateSha256(normalizedTrace);
 
 
-        Optional<IncidentRecord> byHash = incidentRecordRepo.findByHash(errorHash);
+        Optional<ResolvedIncident> byHash = incidentRecordRepo.findByHashError(errorHash);
 
+        if(byHash.isPresent() && byHash.get().getLastSeenAt().isAfter(LocalDateTime.now().minusMinutes(10))){
+            return;
+        }
 
-
+//log.info(byHash.isPresent()+"........................");
         if(byHash.isPresent()){
-            return byHash.get().getResolution();
+
+            ResolvedIncident incident = byHash.get();
+
+            boolean result =funcexecution(incident);
+            if (result){
+                return;
+            }
         }
 
         List<Document> l2Results =vectorStore.similaritySearch(
@@ -43,32 +84,84 @@ public class SimilarityFind {
         if(!l2Results.isEmpty()){
             Document bestmatch=l2Results.getFirst();
 
-            double similarityScore=(double) bestmatch.getMetadata().get("distance");
+        Float similarityScore= (Float) bestmatch.getMetadata().get("distance");
+        similarityScore=1-similarityScore;
 
             if(similarityScore>=0.90){
-                return (String) bestmatch.getMetadata().get("resolution_steps");
+
+                log.info("Similarity findout");
+               String errorHashs=(String) bestmatch.getMetadata().get("errorHash");
+
+                Optional<ResolvedIncident> byHashs = incidentRecordRepo.findByHashError(errorHashs);
+
+
+
+                if(byHashs.isPresent()){
+
+                    ResolvedIncident incident = byHashs.get();
+
+                    boolean result =funcexecution(incident);
+                    if (result){
+                        return;
+                    }
+                }
             }
         }
-        String generatedResolution = geminiClient.analyzeError(normalizedTrace);
-        populateCachesAsync(errorHash, normalizedTrace, generatedResolution);
-        return generatedResolution;
-    }
-    @Async
-    public void populateCachesAsync(String hash, String trace, String resolution) {
-        incidentRecordRepo.save(new IncidentRecord(hash, trace, resolution));
 
-        Document doc = new Document(trace, Map.of(
-                "error_hash", hash,
-                "resolution_steps", resolution
-        ));
-        vectorStore.add(List.of(doc));
+log.info("Gen ca;;;;;eeeeeeeeeeed");
+        geminiClient.analyzeError(normalizedTrace);
     }
+
+    @Transactional(propagation = Propagation.SUPPORTS)
+    private boolean funcexecution(ResolvedIncident incident) {
+        if(incident.getCategory().equals("INFRA")){
+
+
+            Optional<DashboardDeveloperTrigger> byErrorHash = developerTriggerRepo.findByErrorHash(incident.getErrorHash());
+
+            DashboardDeveloperTrigger dashboardDeveloperTrigger = byErrorHash.get();
+
+            dashboardDeveloperTrigger.setOccurrenceCount(dashboardDeveloperTrigger.getOccurrenceCount()+1);
+            dashboardDeveloperTrigger.setStatus("ACTIVE");
+
+            developerTriggerRepo.save(dashboardDeveloperTrigger);
+
+            return true;
+
+        }
+        else{
+
+
+            String prUrl=incident.getResolutionData();
+            try {
+                String[] segments = prUrl.split("/");
+                String pullNumberStr = segments[segments.length - 1];
+                int pullNumber = Integer.parseInt(pullNumberStr);
+
+
+                Map<String, Object> prResponse = client.get()
+                        .uri("/repos/{owner}/{repo}/pulls/{pull_number}", owner, repo, pullNumber)
+                        .retrieve()
+                        .body(Map.class);
+
+                if (prResponse != null && prResponse.containsKey("merged")) {
+                    return true;
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to check PR merge status: " + e.getMessage());
+            }
+
+            return false;
+
+        }
+    }
+
 
     private String extractStackTrace(String log) {
         return log.replaceAll("^\\d{4}-\\d{2}-\\d{2}.*?(java\\.|com\\.)", "$1");
     }
 
-    private String generateSha256(String input) {
+    String generateSha256(String input) {
         return org.apache.commons.codec.digest.DigestUtils.sha256Hex(input);
     }
 
