@@ -1,197 +1,205 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIOps Enterprise Control Plane</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151e2e', 950: '#0b0f19' }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        /* Light mode scrollbars */
+        /* Cross-theme Scrollbars */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-        /* Hide scrollbar for the horizontal service ribbon but allow scrolling */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Animations */
         .chat-bubble { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Light Theme Syntax Highlighting */
-        .keyword { font-weight: bold; color: #15803d; } /* Green */
-        .type { color: #0369a1; }
-        .string { color: #b91c1c; } /* Red */
+        /* Syntax Highlighting */
+        .keyword { font-weight: bold; color: #0284c7; }
+        .dark .keyword { color: #38bdf8; }
+        .type { color: #059669; }
+        .dark .type { color: #34d399; }
+        .string { color: #e11d48; }
+        .dark .string { color: #fb7185; }
         .removed { color: #991b1b; background-color: #fee2e2; text-decoration: line-through; display: inline-block; width: 100%; }
+        .dark .removed { color: #fca5a5; background-color: #7f1d1d40; }
         .added { color: #166534; background-color: #dcfce7; font-weight: bold; display: inline-block; width: 100%; }
+        .dark .added { color: #6ee7b7; background-color: #14532d40; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased h-screen w-screen overflow-hidden flex selection:bg-green-200 selection:text-green-900">
+<body class="bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-slate-300 font-sans antialiased h-screen w-screen overflow-hidden flex transition-colors duration-200 selection:bg-indigo-200 dark:selection:bg-indigo-900">
 
-<!-- 1. Global Navigation Sidebar (Left) -->
-<aside class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-6 shrink-0 z-20 shadow-sm">
-    <div class="p-2 bg-green-100 text-green-700 rounded-xl border border-green-200 shadow-sm">
+<!-- Global Navigation Sidebar -->
+<aside class="w-16 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col items-center py-4 gap-6 shrink-0 z-20 shadow-sm transition-colors duration-200">
+    <div class="p-2 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-xl border border-indigo-200 dark:border-indigo-500/30 shadow-sm">
         <i data-lucide="hexagon" class="w-6 h-6"></i>
     </div>
-    <nav class="flex flex-col gap-4 mt-4 w-full px-2">
-        <button class="p-3 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all group relative flex justify-center">
+    <nav class="flex flex-col gap-4 mt-4 w-full px-2 flex-1">
+        <button class="p-3 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-xl transition-all flex justify-center">
             <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
         </button>
-        <button class="p-3 text-red-600 bg-red-50 rounded-xl transition-all border border-red-100 flex justify-center shadow-sm">
+        <button class="p-3 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 rounded-xl transition-all border border-rose-100 dark:border-rose-500/20 flex justify-center shadow-sm">
             <i data-lucide="alert-triangle" class="w-5 h-5"></i>
         </button>
-        <button class="p-3 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all flex justify-center">
+        <button class="p-3 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-xl transition-all flex justify-center">
             <i data-lucide="server" class="w-5 h-5"></i>
         </button>
-        <button class="p-3 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all flex justify-center mt-auto">
-            <i data-lucide="settings" class="w-5 h-5"></i>
-        </button>
     </nav>
+
+    <!-- Theme Toggle -->
+    <button onclick="toggleTheme()" class="p-3 mb-2 text-gray-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-xl transition-all flex justify-center">
+        <i data-lucide="moon" id="theme-icon" class="w-5 h-5"></i>
+    </button>
 </aside>
 
-<!-- 2. Main Content Wrapper -->
-<main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50">
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-    <!-- Top Header & Live Telemetry -->
-    <header class="h-16 px-6 border-b border-gray-200 flex items-center justify-between shrink-0 bg-white z-10">
+    <!-- Header & Telemetry -->
+    <header class="h-14 px-6 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900 z-10 transition-colors duration-200">
         <div>
-            <h1 class="text-lg font-bold tracking-tight text-gray-900 flex items-center gap-2">
-                Incident Command <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] uppercase font-bold border border-red-200 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> Live</span>
+            <h1 class="text-base font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
+                Incident Command <span class="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] uppercase font-bold border border-rose-200 dark:border-rose-500/30 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> Live</span>
             </h1>
         </div>
 
-        <!-- Live Global Metrics Grid -->
         <div class="flex items-center gap-4">
-            <div class="flex flex-col min-w-[80px]">
-                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Cluster CPU</span>
+            <div class="flex flex-col items-end">
+                <span class="text-[9px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">Cluster CPU</span>
                 <div class="flex items-center gap-1">
-                    <span id="metric-cpu" class="text-green-600 font-mono font-bold text-sm">42%</span>
-                    <i data-lucide="activity" class="w-3 h-3 text-green-600"></i>
+                    <span id="metric-cpu" class="text-emerald-600 dark:text-emerald-400 font-mono font-bold text-sm">42%</span>
+                    <i data-lucide="activity" class="w-3 h-3 text-emerald-600 dark:text-emerald-400"></i>
                 </div>
             </div>
-            <div class="h-6 w-px bg-gray-200"></div>
-            <div class="flex flex-col min-w-[80px]">
-                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Global RAM</span>
+            <div class="h-6 w-px bg-gray-200 dark:bg-slate-700"></div>
+            <div class="flex flex-col items-end">
+                <span class="text-[9px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">Global RAM</span>
                 <div class="flex items-center gap-1">
-                    <span id="metric-ram" class="text-red-600 font-mono font-bold text-sm">24.5</span>
-                    <span class="text-[10px] text-gray-400 font-mono mt-0.5">GB</span>
+                    <span id="metric-ram" class="text-rose-600 dark:text-rose-400 font-mono font-bold text-sm">24.5</span>
+                    <span class="text-[10px] text-gray-400 dark:text-slate-500 font-mono mt-0.5">GB</span>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- NEW: Microservices Health Ribbon (Small Components) -->
-    <div class="h-[72px] shrink-0 border-b border-gray-200 bg-gray-50 flex items-center px-4 overflow-x-auto hide-scrollbar z-0 relative">
-        <div id="services-ribbon" class="flex items-center gap-3">
-            <!-- Rendered via JS -->
-        </div>
-        <!-- Right gradient fade for horizontal scroll hint -->
-        <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none"></div>
+    <!-- Microservices Health Ribbon -->
+    <div class="h-16 shrink-0 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 flex items-center px-4 overflow-x-auto hide-scrollbar relative transition-colors duration-200">
+        <div id="services-ribbon" class="flex items-center gap-3"></div>
+        <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 dark:from-slate-950 to-transparent pointer-events-none transition-colors duration-200"></div>
     </div>
 
-    <!-- Workspace Layout (2 Columns: List | Detail+Chat) -->
+    <!-- Workspace Layout -->
     <div class="flex-1 flex overflow-hidden">
 
-        <!-- Column A: Incident Feed (Fixed Width) -->
-        <aside class="w-[360px] border-r border-gray-200 flex flex-col bg-white shrink-0 z-0">
-            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h2 class="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                    <i data-lucide="list-filter" class="w-4 h-4 text-gray-400"></i> Alert Queue
+        <!-- Alert Queue -->
+        <aside class="w-[320px] border-r border-gray-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900 shrink-0 z-0 transition-colors duration-200">
+            <div class="p-3 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-850">
+                <h2 class="text-[11px] font-bold text-gray-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="list-filter" class="w-3.5 h-3.5"></i> Alert Queue
                 </h2>
-                <span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-mono font-bold" id="incident-count">0</span>
+                <span class="bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 text-xs px-2 py-0.5 rounded-full font-mono font-bold" id="incident-count">0</span>
             </div>
-            <div id="incident-list" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-                <!-- Rendered via JS -->
-            </div>
+            <div id="incident-list" class="flex-1 overflow-y-auto p-2.5 flex flex-col gap-2"></div>
         </aside>
 
-        <!-- Column B: Incident Detail & Action Area (Flex 1) -->
-        <section class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-gray-50">
-            <div class="max-w-6xl mx-auto w-full p-6 flex flex-col gap-6">
+        <!-- Incident Detail -->
+        <section class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+            <div class="max-w-7xl mx-auto w-full p-4 md:p-6 flex flex-col gap-6">
 
-                <!-- Incident Header Card -->
-                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
-                    <div class="flex items-start justify-between relative z-10">
+                <!-- Header Card -->
+                <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors duration-200">
+                    <div class="flex items-start justify-between">
                         <div>
-                            <div class="flex items-center gap-3 mb-3">
-                                <span id="detail-type-badge" class="text-[10px] font-bold px-2 py-1 rounded border tracking-wide uppercase"></span>
-                                <span id="detail-time" class="text-xs text-gray-400 font-mono"></span>
+                            <div class="flex items-center gap-3 mb-2">
+                                <span id="detail-type-badge" class="text-[10px] font-bold px-2 py-0.5 rounded tracking-wide uppercase border"></span>
+                                <span id="detail-time" class="text-xs text-gray-400 dark:text-slate-500 font-mono"></span>
                             </div>
-                            <h2 id="detail-id" class="text-3xl font-black text-gray-900 font-mono tracking-tight mb-1">Select an incident</h2>
-                            <p id="detail-exception" class="text-red-600 font-mono text-sm font-semibold"></p>
+                            <h2 id="detail-id" class="text-2xl font-black text-gray-900 dark:text-white font-mono tracking-tight mb-1">Select an incident</h2>
+                            <p id="detail-exception" class="text-rose-600 dark:text-rose-400 font-mono text-sm font-semibold"></p>
                         </div>
 
                         <div class="flex flex-col items-end gap-3">
-                            <div id="pr-status-container" class="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
-                                <!-- PR Status -->
-                            </div>
-                            <button id="merge-btn" onclick="mergePullRequest()" class="hidden bg-green-600 text-white hover:bg-green-700 px-6 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-md shadow-green-600/20">
+                            <div id="pr-status-container" class="flex items-center gap-2 bg-gray-50 dark:bg-slate-950 px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-800"></div>
+                            <button id="merge-btn" onclick="mergePullRequest()" class="hidden bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 px-5 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-md shadow-indigo-600/20">
                                 <i data-lucide="git-merge" class="w-4 h-4"></i> Merge Pull Request
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Master Detail Grid -->
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <!-- Analysis Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-280px)] min-h-[500px]">
 
-                    <!-- Left Side: Analysis & Code -->
-                    <div class="xl:col-span-2 flex flex-col gap-6">
-
-                        <!-- Root Cause -->
-                        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <i data-lucide="brain-circuit" class="w-4 h-4 text-green-600"></i> AI Diagnosis
+                    <!-- Left Column: Diagnostics & Code -->
+                    <div class="lg:col-span-3 flex flex-col gap-4">
+                        <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 shadow-sm transition-colors duration-200">
+                            <h3 class="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                <i data-lucide="brain-circuit" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> AI Diagnosis
                             </h3>
-                            <p id="detail-root-cause" class="text-gray-700 leading-relaxed text-sm font-medium">...</p>
+                            <p id="detail-root-cause" class="text-gray-700 dark:text-slate-300 leading-relaxed text-sm font-medium">...</p>
                         </div>
 
-                        <!-- Patch Viewer -->
-                        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col flex-1 shadow-sm">
-                            <div class="bg-gray-100 px-4 py-2.5 border-b border-gray-200 flex justify-between items-center">
-                  <span class="text-xs font-mono text-gray-700 flex items-center gap-2">
-                    <i data-lucide="file-code" class="w-4 h-4 text-green-600"></i> <span id="detail-filename">file</span>
-                  </span>
-                                <div class="flex items-center gap-3 text-xs text-gray-500">
-                                    <span class="flex items-center gap-1 text-green-700 bg-green-100 px-2 py-0.5 rounded border border-green-200 font-bold"><i data-lucide="shield-check" class="w-3 h-3"></i> AST Verified</span>
-                                    <button class="hover:text-gray-900 transition-colors"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                        <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-hidden flex flex-col flex-1 shadow-sm transition-colors duration-200">
+                            <div class="bg-gray-50 dark:bg-slate-850 px-4 py-2 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center">
+                                <span class="text-xs font-mono text-gray-700 dark:text-slate-300 flex items-center gap-2">
+                                    <i data-lucide="file-code" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> <span id="detail-filename">file</span>
+                                </span>
+                                <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
+                                    <span class="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20 font-bold">
+                                        <i data-lucide="shield-check" class="w-3 h-3"></i> AST Verified
+                                    </span>
                                 </div>
                             </div>
-                            <div class="p-5 overflow-x-auto text-[13px] font-mono leading-relaxed flex-1 text-gray-800 bg-white">
+                            <div class="p-4 overflow-x-auto text-[13px] font-mono leading-relaxed flex-1 text-gray-800 dark:text-slate-200 bg-white dark:bg-slate-900">
                                 <pre><code id="detail-patch"></code></pre>
                             </div>
                         </div>
-
                     </div>
 
-                    <!-- Right Side: AI Copilot Chat -->
-                    <div class="xl:col-span-1 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col h-[600px] xl:h-auto overflow-hidden">
-                        <div class="p-4 border-b border-gray-200 bg-green-600 flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                                <i data-lucide="bot" class="w-4 h-4 text-white"></i> SRE Copilot
+                    <!-- Right Column: Copilot -->
+                    <div class="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col overflow-hidden transition-colors duration-200">
+                        <div class="p-3 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-850 flex items-center justify-between">
+                            <h2 class="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                <i data-lucide="bot" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> SRE Copilot
                             </h2>
                             <span class="flex h-2 w-2 relative">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-200 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-                </span>
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                            </span>
                         </div>
 
-                        <div id="chat-window" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-gray-50">
+                        <div id="chat-window" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
                             <div class="chat-bubble flex gap-3">
-                                <div class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 border border-green-200"><i data-lucide="bot" class="w-3 h-3"></i></div>
-                                <div class="bg-white p-3 rounded-xl rounded-tl-none text-sm text-gray-700 border border-gray-200 shadow-sm leading-relaxed">
+                                <div class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-500/30"><i data-lucide="bot" class="w-3 h-3"></i></div>
+                                <div class="bg-gray-50 dark:bg-slate-800 p-3 rounded-xl rounded-tl-none text-sm text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 shadow-sm leading-relaxed">
                                     Ready to assist. Review the generated patch on the left. You can ask me to explain the logic, check logs, or run tests before merging.
                                 </div>
                             </div>
                         </div>
 
-                        <div class="p-3 border-t border-gray-200 bg-white">
+                        <div class="p-3 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-850">
                             <form id="chat-form" class="flex items-center gap-2 relative">
-                                <input type="text" id="chat-input" placeholder="Message Copilot..." class="flex-1 bg-gray-50 border border-gray-300 rounded-lg pl-3 pr-10 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all">
-                                <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-green-600 transition-colors">
+                                <input type="text" id="chat-input" placeholder="Message Copilot..." class="flex-1 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg pl-3 pr-10 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all">
+                                <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                     <i data-lucide="send" class="w-4 h-4"></i>
                                 </button>
                             </form>
@@ -206,15 +214,28 @@
 </main>
 
 <script>
-    // --- 0. Microservices Component Data & Rendering ---
+    // Theme Toggle Logic
+    function toggleTheme() {
+        const html = document.documentElement;
+        const icon = document.getElementById('theme-icon');
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            icon.setAttribute('data-lucide', 'sun');
+        } else {
+            html.classList.add('dark');
+            icon.setAttribute('data-lucide', 'moon');
+        }
+        lucide.createIcons();
+    }
+
     const services = [
-        { name: "API-Gateway", status: "healthy", latency: 24, instances: 3 },
-        { name: "Auth-Service", status: "healthy", latency: 45, instances: 2 },
-        { name: "Address-Service", status: "degraded", latency: 412, instances: 2 },
-        { name: "Order-DB-Pod", status: "down", latency: 0, instances: 0 },
-        { name: "Payment-Service", status: "healthy", latency: 85, instances: 4 },
-        { name: "Kafka-Broker", status: "healthy", latency: 12, instances: 3 },
-        { name: "Inventory-Service", status: "healthy", latency: 33, instances: 2 }
+        { name: "API-Gateway", status: "healthy", latency: 24 },
+        { name: "Auth-Service", status: "healthy", latency: 45 },
+        { name: "Address-Service", status: "degraded", latency: 412 },
+        { name: "Order-DB-Pod", status: "down", latency: 0 },
+        { name: "Payment-Service", status: "healthy", latency: 85 },
+        { name: "Kafka-Broker", status: "healthy", latency: 12 },
+        { name: "Inventory-Service", status: "healthy", latency: 33 }
     ];
 
     function renderServiceRibbon() {
@@ -224,29 +245,29 @@
         services.forEach(svc => {
             let statusColor, dotColor, icon;
             if (svc.status === 'healthy') {
-                statusColor = 'bg-white border-gray-200';
-                dotColor = 'bg-green-500';
-                icon = '<i data-lucide="check-circle-2" class="w-3 h-3 text-green-600"></i>';
+                statusColor = 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800 text-gray-700 dark:text-slate-300';
+                dotColor = 'bg-emerald-500';
+                icon = '<i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-600 dark:text-emerald-400"></i>';
             } else if (svc.status === 'degraded') {
-                statusColor = 'bg-orange-50 border-orange-200';
+                statusColor = 'bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/30 text-orange-800 dark:text-orange-400';
                 dotColor = 'bg-orange-500';
-                icon = '<i data-lucide="alert-circle" class="w-3 h-3 text-orange-600"></i>';
+                icon = '<i data-lucide="alert-circle" class="w-3 h-3 text-orange-600 dark:text-orange-400"></i>';
             } else {
-                statusColor = 'bg-red-50 border-red-200';
-                dotColor = 'bg-red-500';
-                icon = '<i data-lucide="x-circle" class="w-3 h-3 text-red-600"></i>';
+                statusColor = 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-400';
+                dotColor = 'bg-rose-500';
+                icon = '<i data-lucide="x-circle" class="w-3 h-3 text-rose-600 dark:text-rose-400"></i>';
             }
 
             const latencyDisplay = svc.latency > 0 ? `${svc.latency}ms` : '--';
 
             const div = document.createElement('div');
-            div.className = `flex flex-col min-w-[140px] p-2 rounded-lg border ${statusColor} shadow-sm`;
+            div.className = `flex flex-col min-w-[130px] p-2 rounded-lg border shadow-sm transition-colors ${statusColor}`;
             div.innerHTML = `
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[11px] font-bold text-gray-700 truncate pr-2">${svc.name}</span>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold truncate pr-2">${svc.name}</span>
             <div class="w-1.5 h-1.5 rounded-full ${dotColor} ${svc.status === 'healthy' ? '' : 'animate-pulse'}"></div>
           </div>
-          <div class="flex items-center justify-between text-[10px] text-gray-500 font-mono">
+          <div class="flex items-center justify-between text-[9px] font-mono opacity-80">
             <span class="flex items-center gap-1">${icon} ${svc.status}</span>
             <span>${latencyDisplay}</span>
           </div>
@@ -256,58 +277,34 @@
         lucide.createIcons();
     }
 
-    // Update service latencies randomly
     setInterval(() => {
         services.forEach(svc => {
-            if (svc.status === 'healthy') {
-                svc.latency = Math.max(10, svc.latency + (Math.floor(Math.random() * 11) - 5));
-            }
+            if (svc.status === 'healthy') svc.latency = Math.max(10, svc.latency + (Math.floor(Math.random() * 11) - 5));
         });
         renderServiceRibbon();
     }, 3000);
 
-
-    // --- 1. Live Global Telemetry Simulation ---
     setInterval(() => {
         const cpu = document.getElementById('metric-cpu');
         const ram = document.getElementById('metric-ram');
-
         let currentCpu = parseInt(cpu.innerText);
         let nextCpu = currentCpu + (Math.floor(Math.random() * 5) - 2);
-        if (nextCpu < 35) nextCpu = 35;
-        if (nextCpu > 65) nextCpu = 65;
-        cpu.innerText = nextCpu + '%';
-
+        cpu.innerText = Math.max(35, Math.min(nextCpu, 65)) + '%';
         let currentRam = parseFloat(ram.innerText);
         let nextRam = currentRam + (Math.random() * 0.4 - 0.2);
-        if (nextRam < 23.0) nextRam = 23.0;
-        if (nextRam > 25.5) nextRam = 25.5;
-        ram.innerText = nextRam.toFixed(1);
+        ram.innerText = Math.max(23.0, Math.min(nextRam, 25.5)).toFixed(1);
     }, 2000);
 
-    // --- 2. Incident Data & Rendering ---
     const incidents = [
         {
-            id: "INC-726efb93",
-            type: "APP",
-            service: "Address-Service",
-            timestamp: new Date().toISOString(),
-            exception: "java.lang.NullPointerException",
-            location: "AddressController.java:58",
-            status: "PR_READY",
-            filename: "AddressController.java",
+            id: "INC-726efb93", type: "APP", service: "Address-Service", timestamp: new Date().toISOString(),
+            exception: "java.lang.NullPointerException", location: "AddressController.java:58", status: "PR_READY", filename: "AddressController.java",
             rootCause: "Hardcoded NullPointerException explicitly thrown inside getdataexception() endpoint.",
             patch: `<span class="keyword">@GetMapping</span>(<span class="string">"/getdataexception"</span>)\n<span class="keyword">public</span> <span class="type">ResponseEntity&lt;String&gt;</span> getdata() {\n    <span class="keyword">return</span> <span class="type">ResponseEntity</span>.ok(<span class="string">"Resolved NullPointerException"</span>);\n}`
         },
         {
-            id: "INFRA-K8S-092",
-            type: "INFRA",
-            service: "Order-DB-Pod",
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            exception: "OOMKilled - Memory Limit Exceeded",
-            location: "k8s/order-deployment.yaml",
-            status: "PR_READY",
-            filename: "order-deployment.yaml",
+            id: "INFRA-K8S-092", type: "INFRA", service: "Order-DB-Pod", timestamp: new Date(Date.now() - 3600000).toISOString(),
+            exception: "OOMKilled - Memory Limit Exceeded", location: "k8s/order-deployment.yaml", status: "PR_READY", filename: "order-deployment.yaml",
             rootCause: "PostgreSQL pod exceeded the 512Mi memory limit during bulk index recreation. AI recommends increasing limit to 1Gi.",
             patch: ` resources:\n   requests:\n     memory: <span class="string">"256Mi"</span>\n     cpu: <span class="string">"250m"</span>\n   limits:\n<span class="removed">-    memory: "512Mi"</span>\n<span class="added">+    memory: "1Gi"</span>\n     cpu: <span class="string">"500m"</span>`
         }
@@ -324,14 +321,13 @@
             const isSelected = inc.id === selectedIncident.id;
             const icon = inc.type === 'APP' ? 'code-2' : 'server-crash';
 
-            // Green and Red card styling for Queue
             const cardStyle = isSelected
-                ? 'bg-green-50 border-green-500 shadow-sm'
-                : 'bg-white border-gray-200 hover:bg-gray-50';
+                ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 dark:border-indigo-400 shadow-sm'
+                : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50';
 
             const badgeStyle = inc.type === 'APP'
-                ? 'text-green-700 bg-green-100 border-green-200'
-                : 'text-red-700 bg-red-100 border-red-200';
+                ? 'text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30'
+                : 'text-rose-700 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/20 border-rose-200 dark:border-rose-500/30';
 
             const div = document.createElement('div');
             div.className = `p-3 rounded-xl border cursor-pointer transition-all ${cardStyle}`;
@@ -339,13 +335,13 @@
 
             div.innerHTML = `
           <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border font-mono uppercase flex items-center gap-1.5 ${badgeStyle}">
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border font-mono uppercase flex items-center gap-1.5 ${badgeStyle}">
               <i data-lucide="${icon}" class="w-3 h-3"></i> ${inc.type}
             </span>
-            <span class="text-[10px] text-gray-500 font-mono">${new Date(inc.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</span>
+            <span class="text-[9px] text-gray-500 dark:text-slate-500 font-mono">${new Date(inc.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</span>
           </div>
-          <p class="text-sm font-bold text-gray-900 truncate mb-1 tracking-tight">${inc.id}</p>
-          <p class="text-[11px] text-gray-500 truncate"><span class="text-red-600 font-mono">${inc.exception.split('.').pop()}</span> in ${inc.service}</p>
+          <p class="text-sm font-bold text-gray-900 dark:text-white truncate mb-0.5 tracking-tight">${inc.id}</p>
+          <p class="text-[10px] text-gray-500 dark:text-slate-400 truncate"><span class="text-rose-600 dark:text-rose-400 font-mono font-medium">${inc.exception.split('.').pop()}</span> in ${inc.service}</p>
         `;
             list.appendChild(div);
         });
@@ -363,10 +359,10 @@
 
         const badge = document.getElementById('detail-type-badge');
         if (inc.type === 'APP') {
-            badge.className = "text-[10px] font-bold px-2 py-1 rounded border tracking-wide uppercase text-green-700 bg-green-100 border-green-200";
+            badge.className = "text-[10px] font-bold px-2 py-0.5 rounded border tracking-wide uppercase text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30";
             badge.innerText = "APPLICATION FAULT";
         } else {
-            badge.className = "text-[10px] font-bold px-2 py-1 rounded border tracking-wide uppercase text-red-700 bg-red-100 border-red-200";
+            badge.className = "text-[10px] font-bold px-2 py-0.5 rounded border tracking-wide uppercase text-rose-700 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/20 border-rose-200 dark:border-rose-500/30";
             badge.innerText = "INFRASTRUCTURE FAULT";
         }
 
@@ -379,10 +375,10 @@
         const mergeBtn = document.getElementById('merge-btn');
 
         if (status === 'PR_READY') {
-            container.innerHTML = `<i data-lucide="git-pull-request" class="w-4 h-4 text-green-600"></i><span class="text-xs text-gray-700 font-bold tracking-wide">PR Created</span>`;
+            container.innerHTML = `<i data-lucide="git-pull-request" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i><span class="text-xs text-gray-700 dark:text-slate-300 font-bold tracking-wide">PR Created</span>`;
             mergeBtn.classList.remove('hidden');
         } else if (status === 'MERGED') {
-            container.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-green-600"></i><span class="text-xs text-green-700 font-bold uppercase tracking-wide">Fix Deployed</span>`;
+            container.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i><span class="text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wide">Fix Deployed</span>`;
             mergeBtn.classList.add('hidden');
         }
         lucide.createIcons();
@@ -390,18 +386,17 @@
 
     function mergePullRequest() {
         const btn = document.getElementById('merge-btn');
-        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> <span class="text-white">Processing...</span>`;
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Processing...`;
         btn.classList.add('opacity-75', 'cursor-not-allowed');
 
         setTimeout(() => {
             selectedIncident.status = 'MERGED';
             updatePRStatus('MERGED');
 
-            // Dynamically fix the service component ribbon state
             const targetService = services.find(s => s.name === selectedIncident.service);
             if(targetService) {
                 targetService.status = 'healthy';
-                targetService.latency = 25; // Return to normal latency
+                targetService.latency = 25;
                 renderServiceRibbon();
             }
 
@@ -409,7 +404,6 @@
         }, 1500);
     }
 
-    // --- 3. Chatbot Logic ---
     document.getElementById('chat-form').onsubmit = (e) => {
         e.preventDefault();
         const input = document.getElementById('chat-input');
@@ -430,18 +424,18 @@
         div.className = `chat-bubble flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
 
         const avatar = isUser
-            ? `<div class="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center shrink-0 border border-gray-300"><i data-lucide="user" class="w-3 h-3"></i></div>`
+            ? `<div class="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0"><i data-lucide="user" class="w-3 h-3"></i></div>`
             : (sender === "System"
-                ? `<div class="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 border border-red-200"><i data-lucide="terminal" class="w-3 h-3"></i></div>`
-                : `<div class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 border border-green-200"><i data-lucide="bot" class="w-3 h-3"></i></div>`);
+                ? `<div class="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-500/30"><i data-lucide="terminal" class="w-3 h-3"></i></div>`
+                : `<div class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-500/30"><i data-lucide="bot" class="w-3 h-3"></i></div>`);
 
         const bubbleClass = isUser
-            ? `bg-green-600 p-3 rounded-xl rounded-tr-none text-[13px] text-white shadow-sm`
+            ? `bg-indigo-600 text-white p-3 rounded-xl rounded-tr-none text-[13px] shadow-sm`
             : (sender === "System"
-                ? `bg-red-50 p-3 rounded-xl rounded-tl-none text-[13px] text-red-800 border border-red-200 font-mono`
-                : `bg-white p-3 rounded-xl rounded-tl-none text-[13px] text-gray-700 border border-gray-200 shadow-sm leading-relaxed`);
+                ? `bg-rose-50 dark:bg-rose-500/10 p-3 rounded-xl rounded-tl-none text-[13px] text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 font-mono`
+                : `bg-gray-50 dark:bg-slate-800 p-3 rounded-xl rounded-tl-none text-[13px] text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 shadow-sm leading-relaxed`);
 
-        div.innerHTML = avatar + `<div class="${bubbleClass}">${text}</div>`;
+        div.innerHTML = avatar + `<div class="${bubbleClass} max-w-[85%]">${text}</div>`;
         chat.appendChild(div);
         chat.scrollTop = chat.scrollHeight;
         lucide.createIcons();

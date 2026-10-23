@@ -3,6 +3,10 @@ package com.aiopsengineservice.Service;
 
 import com.aiopsengineservice.Entity.CodePatchResponse;
 import com.aiopsengineservice.Entity.IncidentClassificationDto;
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
 import jakarta.persistence.Persistence;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.internal.util.StringHelper;
@@ -46,32 +50,51 @@ public class IncidentResolvedServiceProvider {
                                        ToolContext context) {
 
 log.info("Code review or correction Starts");
-        String rawMethodCode = githubApiService.fetchMethodCode(serviceName, targetClass, methodName, lineNumber);
+        String rawJavaFileCode = githubApiService.fetchMethodCode(serviceName, targetClass, methodName, lineNumber);
 
+        CompilationUnit astTree = StaticJavaParser.parse(rawJavaFileCode);
         String sanitizedLog = (String) context.getContext().get("normalizedTrace");
-        String coderPrompt = String.format("""
-                You are a strict Java code reviewer.
-                
-                             Original Error:
-                             %s
-                
-                             Original Code:
-                             %s
-                
-                             Proposed Patch:
-                             %s
-                
-                             Review the patch for correctness, syntax, and consistency
-                             with the original error.
-                
-                             Return all three fields:
-                             - rootCauseExplanation: the actual root cause
-                             - fixedMethodCode: the complete corrected Java method
-                             - commitMessage: a concise commit message
-                
-                             Populate every field with a meaningful, non-null value.
-                             Do not invent missing source code.
-                """, sanitizedLog, targetClass, methodName, lineNumber, rawMethodCode);
+
+
+        MethodDeclaration originalMethodNode = astTree.findAll(MethodDeclaration.class).stream()
+                .filter(method -> method.getNameAsString().equals(methodName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Method '" + methodName + "' not found in AST."));
+
+
+        StringBuilder classDependencies = new StringBuilder();
+        astTree.findAll(FieldDeclaration.class).forEach(field ->
+                classDependencies.append(field.toString()).append("\n")
+        );
+
+        String coderPrompt = """
+            You are an expert Java Spring Boot Automated Patching Agent.
+            
+            FAILING SERVICE: %s
+            TARGET CLASS: %s
+            FAILING METHOD NAME: %s
+            LINE NUMBER: %d
+            
+            AVAILABLE CLASS DEPENDENCIES (Fields & Repositories):
+            ```java
+            %s
+            ```
+            
+            ORIGINAL STACK TRACE:
+            %s
+            
+            FAILING METHOD SOURCE CODE:
+            ```java
+            %s
+            ```
+            
+            STRICT FIXING RULES:
+            1. FIX ONLY THE FAILING METHOD: Do not modify method signatures unless required.
+            2. DOMAIN ENTITY STRICTNESS: Do not invent getters, setters, or fields on custom domain objects (e.g., entity or DTO classes). If you use a class repository, use ONLY the exact field names provided in AVAILABLE CLASS DEPENDENCIES.
+            3. SPRING DATA JPA: Always handle Optional when using findById(). Use `.orElse(null)` or `.orElseThrow()`.
+            4. COMPLETE CODE: Return the FULL, compilable Java method.
+            """.formatted(serviceName, targetClass, methodName, lineNumber, classDependencies.toString(), sanitizedLog, originalMethodNode.toString());
+
 log.info("File correction starts");
         CodePatchResponse result = chatClient.prompt()
                 .user(coderPrompt)
@@ -84,38 +107,23 @@ log.info("File correction starts");
 
         log.info("File validation starts");
         String validatorPrompt = String.format("""
-You are an expert, strict Java Code Reviewer and Automated Patching Agent.
-
-YOUR GOAL:
-Analyze the provided Original Error, Original Code, and Proposed Patch. Review the patch for syntax, correctness, and consistency. If the proposed patch is invalid, hallucinated, or incomplete, discard it and generate a complete, syntactically valid Java method replacement.
-
-INPUT CONTEXT:
-Original Error:
-%s
-
-Original Code:
-%s
-
-Proposed Patch:
-%s
-
-STRICT GROUNDING RULES:
-1. Adhere Strictly to Original Code: Do NOT invent non-existent variables, classes, parameters, or placeholder comments (such as `// existing logic`, `data`, or `TODO`).
-2. Method Signature Integrity: Do NOT modify the original method signature (annotations, return type, method name, or parameters) unless the error stack trace explicitly demands a signature change.
-3. Complete Implementation: The `fixedMethodCode` MUST contain a fully implemented, compilable Java method—not a snippet or partial block.
-4. Error-Line Alignment: Map the stack trace frame to the exact line in "Original Code". If the method explicitly throws an artificial test error (e.g., `throw new NullPointerException(...)`), replace it with a valid domain response (e.g., returning `ResponseEntity.ok(...)`).
-
-OUTPUT REQUIREMENTS:
-You must populate ALL three fields with non-null values:
-- rootCauseExplanation: A clear explanation of why the original code failed based on the stack trace.
-- fixedMethodCode: The complete, corrected, and compilable Java method.
-- commitMessage: A concise conventional commit message (e.g., "fix(controller): resolve NullPointerException in getdata endpoint").
-
-OUTPUT FORMATTING CONSTRAINTS:
-- Output MUST be valid, unformatted JSON matching the required schema.
-- Do NOT wrap the JSON in markdown code blocks (do NOT use ```json or ```).
-- Do NOT include any conversational text outside the raw JSON object.
-""", sanitizedLog, rawMethodCode, result.getFixedMethodCode());
+            You are an expert, strict Java Code Reviewer and Automated Patching Agent.
+            
+            INPUT CONTEXT:
+            Original Error: %s
+            Original Method Code: %s
+            Proposed Patch: %s
+            
+            STRICT GROUNDING RULES:
+            1. Adhere Strictly to Original Code: Do NOT invent non-existent variables or classes.
+            2. Method Signature Integrity: Keep method name, annotations, and parameters identical.
+            3. Complete Implementation: Output must be fully compilable.
+            
+            OUTPUT REQUIREMENTS:
+            - Output MUST be a raw JSON object.
+            - Do NOT wrap the JSON in markdown blocks (no ```json).
+            - Do NOT wrap the fixedMethodCode inside markdown code blocks (no ```java inside the JSON string).
+            """, sanitizedLog, originalMethodNode.toString(), result.getFixedMethodCode());
 
 
         CodePatchResponse validatedPatch = chatClient.prompt()
@@ -126,12 +134,15 @@ OUTPUT FORMATTING CONSTRAINTS:
         log.info("File validation end ............................................."+validatedPatch);
 
         String codepush=validatedPatch.getFixedMethodCode();
+        String cleanCodePush = codepush.replaceAll("```java\\n?", "").replaceAll("```\\n?", "").trim();
         String codemessage=validatedPatch.getCommitMessage();
 
+       MethodDeclaration message= StaticJavaParser.parseMethodDeclaration(cleanCodePush);
+       originalMethodNode.replace(message);
         String errorHash= similarityFind.generateSha256(sanitizedLog);
         String branchName = "aiops-fix-" + UUID.randomUUID().toString().substring(0, 8);
 
-        String prUrl = githubApiService.createPullRequestWithPatch(targetClass, branchName, codepush,codemessage,serviceName );
+        String prUrl = githubApiService.createPullRequestWithPatch(targetClass, branchName, astTree.toString(),codemessage,serviceName );
 
 persistenceService.saveCodeResolution(errorHash,summary,serviceName,prUrl);
 

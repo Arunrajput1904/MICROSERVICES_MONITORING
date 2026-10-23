@@ -2,11 +2,18 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/AIOps-Engine-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/AIOps-Engine-Service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Address-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Address-Service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Api-Gateway/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Api-Gateway/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Employee-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Employee-Service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/config-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/config-server/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/email-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/email-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/serviceDiscovery/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serviceDiscovery/src/main/resources" charset="UTF-8" />
   </component>
 </project>

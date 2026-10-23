@@ -59,7 +59,7 @@ log.info("fetch of file");
 
         log.info(" file send back to tool");
 
-        return  givethedesiredContent(fullFileCode,lineNumber);
+        return  fullFileCode;
 
 
     }

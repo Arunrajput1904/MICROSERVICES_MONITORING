@@ -112,8 +112,8 @@ log.info("Gen ca;;;;;eeeeeeeeeeed");
         geminiClient.analyzeError(normalizedTrace);
     }
 
-    @Transactional(propagation = Propagation.SUPPORTS)
-    private boolean funcexecution(ResolvedIncident incident) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+     boolean funcexecution(ResolvedIncident incident) {
         if(incident.getCategory().equals("INFRA")){
 
 
