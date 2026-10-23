@@ -7,13 +7,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/address")
-public  class AddressController{
-
+public class AddressController {
 
     @GetMapping("/getdataexception")
-    ResponseEntity<String> getData(){
-        throw new NullPointerException("Null error exception");
+    ResponseEntity<String> getData() {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while processing your request.");
     }
-
-
 }
